@@ -1,5 +1,5 @@
 # Import the module to be tested
-. "$PSScriptRoot/powersage.ps1"
+. "$PSScriptRoot/PowerSageRpc.ps1"
 
 Describe "Start-SageDaemon" {
     It "Should start a job named 'SageDaemon'" {
