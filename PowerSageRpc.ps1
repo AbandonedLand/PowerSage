@@ -41,6 +41,17 @@ function Stop-SageDaemon{
     Remove-Job -Name "SageDaemon"
 }
 
+function Confirm-SageDaemon{
+    
+    
+
+    if(Get-Job -Name "SageDaemon" -ErrorAction SilentlyContinue){
+        return $true
+    } else {
+        return $false
+    }
+}
+
 function Get-SageDaemonOutput {
     Receive-Job -Name "SageDaemon"
 }
