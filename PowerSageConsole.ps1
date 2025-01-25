@@ -41,3 +41,33 @@ function Show-Balances {
 
     Format-SpectreTable -Data $data -Color Green1 -Width 50
 }
+
+function Join-SageOffers{
+    <#
+    .SYNOPSIS
+    Combine multiple offer strings into a single offer string.
+
+    .DESCRIPTION
+    This is used to combine multiple offers togeter so they are accepted as a signle offer.
+
+    .PARAMETER offers
+    An array of offer strings to combine.
+
+    .EXAMPLE
+    $offer1 = "offer1....."
+    $offer2 = "offer2....."
+    $offer_array = @($offer1, $offer2)
+    Join-SageOffers -offers $offer_array
+
+    This will combine the two offers into a single offer string.
+
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string[]]$offers
+    )
+    $json = @{
+        offers = $offers
+    }
+    Invoke-SageRPC -endpoint combine_offers -json $json
+}
