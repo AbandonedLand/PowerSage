@@ -35,8 +35,6 @@ function Get-SageCats{
 
     #>
     
-    
-    Test-SageDaemon
 
     $cats = Invoke-SageRPC -endpoint get_cats -json @{}
     $cat_array = @()
@@ -72,78 +70,8 @@ Class CatRecord{
 
 
 
-function Start-SageDaemon{
-    <#
-    .SYNOPSIS
-    Starts the SageDaemon job.
-
-    .DESCRIPTION
-    The Start-SageDaemon function initiates a background job named "SageDaemon" that runs the command `sage rpc start`.
-
-    .EXAMPLE
-    Start-SageDaemon
-
-    This command starts the SageDaemon job.
-
-    .NOTES
-    Make sure the `sage` command is available in the system's PATH.
-    #>
-
-    Start-Job -Name "SageDaemon" -ScriptBlock {
-        sage rpc start
-    }
-}
-
-function Stop-SageDaemon{
-    <#
-    .SYNOPSIS
-    Stops the SageDaemon job.
-
-    .DESCRIPTION
-    The Stop-SageDaemon function stops the background job named "SageDaemon".
-
-    .EXAMPLE
-    Stop-SageDaemon
-
-    This command stops the SageDaemon job.
-
-    .NOTES
-    This will remove and clear out the SageDaemon Job.
-    #>
-
-    Stop-Job -Name "SageDaemon"
-    Remove-Job -Name "SageDaemon"
-}
-
-function Test-SageDaemon{
-    <#
-    .SYNOPSIS
-    Tests if the SageDaemon job is running.
-
-    .DESCRIPTION
-    The Test-SageDaemon function checks if the background job named "SageDaemon" is running.
-
-    .EXAMPLE
-    Test-SageDaemon
-
-    This command returns a boolean value indicating if the SageDaemon job is running.
-
-    .NOTES
-    This function returns a boolean value.
-    #>
-
-    if(Get-Job -Name "SageDaemon" -ErrorAction SilentlyContinue){
-        return $true
-    } else {
-        throw "The SageDaemon job is not running. Please run Start-SageDaemon to start the job."
-    }
-}
 
 
-function Get-SageDaemonOutput {
-    Test-SageDaemon
-    Receive-Job -Name "SageDaemon"
-}
 
 function Invoke-SageRPC {
     <#
@@ -165,8 +93,6 @@ function Invoke-SageRPC {
 
     This command sends a JSON-RPC request to the get_keys endpoint with no parameters.
 
-    .NOTES
-    The SageDaemon Job must be running before using this function.
 
     #>
     
@@ -176,7 +102,6 @@ function Invoke-SageRPC {
         $json
     )
 
-    Test-SageDaemon
 
     $data = $json | ConvertTo-Json -Depth 30
 
@@ -2342,8 +2267,6 @@ function Revoke-SageOffer{
         auto_submit = $auto_submit
     }
 
-    Confirm-SageOffer -offer_id $offer_id -status "active"
-
     Invoke-SageRPC -endpoint cancel_offer -json $json
 }
 
@@ -2404,7 +2327,6 @@ function Remove-SageOffer{
         offer_id = $offer_id
     }
 
-    Confirm-SageOffer -offer_id $offer_id 
     Invoke-SageRPC -endpoint delete_offer -json $json
 }
 
