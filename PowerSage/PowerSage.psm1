@@ -69,10 +69,6 @@ Class CatRecord{
 }
 
 
-
-
-
-
 function Invoke-SageRPC {
     <#
 
@@ -93,7 +89,6 @@ function Invoke-SageRPC {
 
     This command sends a JSON-RPC request to the get_keys endpoint with no parameters.
 
-
     #>
     
     param(
@@ -101,11 +96,34 @@ function Invoke-SageRPC {
         $endpoint,
         $json
     )
+    $cert = Get-SagePfxCertificate
 
-
+    $uri = "https://127.0.0.1:9257/$endpoint";
+   
     $data = $json | ConvertTo-Json -Depth 30
 
-    sage rpc $endpoint $data | ConvertFrom-Json
+    Invoke-RestMethod -Uri $uri -Method Post -body $data -ContentType 'Application/json' -Certificate $cert -SkipCertificateCheck
+}
+
+function Test-SageRPC{
+    <#
+    .SYNOPSIS
+    Checks if the Sage wallet daemon is running.
+
+    .DESCRIPTION
+    The Check-SageRPC function checks if the Sage wallet daemon is running. If the daemon is not running, it will throw an error.
+
+    .EXAMPLE
+    Test-SageRPC
+
+    This command throws an error if the Sage wallet daemon is not running.
+
+    #>
+    
+    $result = Get-SageSyncStatus 
+    if(-NOT $result){
+        throw "Sage wallet daemon is not running."
+    }
 }
 
 function New-SageMnemonic {
@@ -2474,6 +2492,47 @@ function Get-SageMinterDids{
 function Approve-SageCoinSpend {
 
 }
+
+function New-SagePfxCertificate {
+    
+    if($IsWindows){
+        $certPath = "$home\appdata\roaming\com.rigidnetwork.sage\ssl\wallet.crt"
+        $keyPath = "$home\appdata\roaming\com.rigidnetwork.sage\ssl\wallet.key"
+        $pfxPath = "$home\appdata\roaming\com.rigidnetwork.sage\ssl\wallet.pfx"
+    }
+    if($IsLinux){
+        $certPath = "$home/.local/share/com.rigidnetwork.sage/ssl/wallet.crt"
+        $keyPath = "$home/.local/share/com.rigidnetwork.sage/ssl/wallet.key"
+        $pfxPath = "$home/.local/share/com.rigidnetwork.sage/ssl/wallet.pfx"
+    }
+
+    $cert = Get-Content -Path $certPath -Raw
+    $key = Get-Content -Path $keyPath -Raw
+
+    $certPem = [System.Security.Cryptography.X509Certificates.X509Certificate2]::CreateFromPem($cert, $key)
+    $certPem = $certPem.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Pkcs12)
+
+    [System.IO.File]::WriteAllBytes($pfxPath, $certPem)
+    
+
+}
+
+function Get-SagePfxCertificate {
+   
+    if($IsWindows){
+        $certPath = "$home\appdata\roaming\com.rigidnetwork.sage\ssl\wallet.pfx"
+    }
+    if($IsLinux){
+        $certPath = "$home/.local/share/com.rigidnetwork.sage/ssl/wallet.pfx"
+    }
+    if(-not (Test-Path -Path $certPath)){
+        throw "The certificate to access the wallet does not exist. Please create it using New-SagePfxCertificate."
+    }
+    $certificate = Get-PfxCertificate -FilePath $certPath -Password $certPassword
+    return $certificate
+}
+
+
 
 <#
 

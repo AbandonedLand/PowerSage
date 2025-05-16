@@ -12,7 +12,7 @@
 RootModule = 'PowerSage.psm1'
 
 # Version number of this module.
-ModuleVersion = '0.10.2'
+ModuleVersion = '1.0.0'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -29,7 +29,7 @@ Author = 'MayorAbandoned'
 Copyright = '(c) MayorAbandoned. All rights reserved.'
 
 # Description of the functionality provided by this module
-Description = 'PowerShell module for interacting with the Chia Sage Wallet RPC'
+Description = 'PowerShell module for interacting with the Sage Wallet RPC API.'
 
 # Minimum version of the PowerShell engine required by this module
 PowerShellVersion = '7.4'
