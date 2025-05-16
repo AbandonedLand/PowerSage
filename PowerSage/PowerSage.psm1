@@ -2533,6 +2533,35 @@ function Get-SagePfxCertificate {
 }
 
 
+function Join-SageOffers {
+    <#
+    .SYNOPSIS
+    Combine multiple offers into one.
+    .DESCRIPTION
+    Join multiple offers into one. This is useful for creating a single offer from multiple offers.
+    .PARAMETER offers
+    An array of offer strings to join.
+
+    .EXAMPLE
+    #>
+    param(
+        [Parameter(Mandatory=$true)]
+        [string[]]$offers
+    )
+    if($null -eq $offers){
+        throw "The offers must be an array of offer strings."
+    }
+    if($offers.Count -lt 2){
+        throw "The offers must be an array of offer strings with at least 2 elements."
+    }
+    $json = @{
+        offers = $offers
+    }
+    
+    Invoke-SageRPC -endpoint combine_offers -json $json
+        
+}
+
 
 <#
 
