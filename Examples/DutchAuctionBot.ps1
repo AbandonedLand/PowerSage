@@ -58,6 +58,16 @@ function Start-SimpleDuctchAuction {
             $exit = $true
             break
         }
+
+        # Make sure the NFT is in your wallet.
+        # If not, then exit.
+        $nft = get-SageNft -nft_id $nft_id
+        if($null -eq $nft){
+            Write-Host "NFT not found, exiting."
+            $exit = $true
+            break
+        }
+
         
         # Create the offer class to build the offer.
 
