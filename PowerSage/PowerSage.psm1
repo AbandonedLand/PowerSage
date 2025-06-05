@@ -65,7 +65,6 @@ Class CatRecord{
             }
         }
     }
-
 }
 
 
@@ -428,7 +427,8 @@ function Get-SageCat{
         asset_id = $asset_id
     }
     $cat = Invoke-SageRPC -endpoint get_cat -json $json
-    $cat.cat
+    $catrecord = [CatRecord]::new($cat.cat)
+    return $catrecord
 }
 
 function Remove-SageCat{
@@ -732,6 +732,11 @@ function Get-SageTransactions {
     This command gets the 10 most recent transactions.
 
     .EXAMPLE
+    Get-SageTransactions -offset 0 -limit 10 -ascending
+
+    This command gets the 10 oldest transactions in the wallet.
+
+    .EXAMPLE
     Get-SageTransactions -offset 10 -limit 10
 
     This command gets the next 10 transactions after the first 10.
@@ -741,11 +746,17 @@ function Get-SageTransactions {
         [Parameter(Mandatory=$true)]
         [uint32]$offset,
         [Parameter(Mandatory=$true)]
-        [uint32]$limit
+        [uint32]$limit,
+        [switch]$ascending
     )
     $json = @{
         offset = $offset
         limit = $limit
+    }
+    if($ascending.IsPresent){
+        $json.ascending = $true
+    } else {
+        $json.ascending = $false
     }
     $transactions = Invoke-SageRPC -endpoint get_transactions -json $json
     $transactions.transactions
@@ -2486,7 +2497,17 @@ function Add-SageNftUri{
 }
 
 function Get-SageMinterDids{
-    Invoke-SageRPC -endpoint get_minter_did_ids -json @{}
+    param(
+        [Parameter(Mandatory=$true)]
+        [UInt32]$offset,
+        [Parameter(Mandatory=$true)]
+        [UInt32]$limit
+    )
+    $json = @{
+        offset = $offset
+        limit = $limit
+    }
+    Invoke-SageRPC -endpoint get_minter_did_ids -json $json
 }
 
 function Approve-SageCoinSpend {
@@ -2562,21 +2583,99 @@ function Join-SageOffers {
         
 }
 
+class SagePayments {
+    [UInt64] $fee = 0
+    [bool] $auto_submit = $true
+    [array] $payments = @()
+    $response
 
-<#
+    addPayment([string] $asset_id,[string]$address,[uint64]$amount) {
+        $payment = @{
+            asset_id = $asset_id
+            address = $address
+            amount = $amount
+        }
+        $this.payments += $payment
+    }
 
-sign_coin_spends
-view_coin_spends
-submit_transaction
+    submit() {
+        if($this.payments.Count -eq 0){
+            throw "No payments to submit."
+        }
+        $json = @{
+            fee = $this.fee
+            auto_submit = $this.auto_submit
+            payments = $this.payments
+        }
+        $this.response = Invoke-SageRPC -endpoint multi_send -json $json
+    }
+}
+
+function Build-SageBulkPayments(){
+    return [SagePayments]::new()        
+}
 
 
-set_derive_automatically
-set_derivation_batch_size
 
-remove_cat
-update_cat
-increase_derivation_index
+function Hide-SageNft {
+    <#
+    .SYNOPSIS
+    Hide an NFT from the wallet.
 
-#>
+    .DESCRIPTION
+    Hide an NFT from the wallet. This does not delete the NFT, it just hides it from the wallet.
+
+    .PARAMETER nft_id
+    The ID of the NFT to hide.
+
+    .EXAMPLE
+    Hide-SageNft -nft_id 1234567890abcdef
+
+    Hides the NFT with the ID 1234567890abcdef
+
+    #>
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$nft_id
+    )
+    
+    $json = @{
+        nft_id = $nft_id
+        visible = $false
+    }
+
+    Invoke-SageRPC -endpoint update_nft -json $json
+}
+
+function Show-SageNft {
+    <#
+    .SYNOPSIS
+    Show an NFT in the wallet.
+
+    .DESCRIPTION
+    Show an NFT in the wallet. This does not delete the NFT, it just shows it in the wallet.
+
+    .PARAMETER nft_id
+    The ID of the NFT to show.
+
+    .EXAMPLE
+    Show-SageNft -nft_id 1234567890abcdef
+
+    Shows the NFT with the ID 1234567890abcdef
+
+    #>
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$nft_id
+    )
+    
+    $json = @{
+        nft_id = $nft_id
+        visible = $true
+    }
+
+    Invoke-SageRPC -endpoint update_nft -json $json
+}
+
 
 Export-ModuleMember -Function *
