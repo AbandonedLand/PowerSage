@@ -199,7 +199,7 @@ function Import-SageKeys {
 function Get-SageKey {
     <#
     .SYNOPSIS
-    Gets a key from the Sage wallet.
+    Get the logged in key from the Sage wallet.
 
     .DESCRIPTION
     The Get-SageKey function retrieves a key from the Sage wallet using the key's fingerprint.
@@ -208,17 +208,12 @@ function Get-SageKey {
     The fingerprint of the key to be retrieved.
 
     .EXAMPLE
-    Get-SageKey -fingerprint 12345678
+    Get-SageKey
 
-    This command retrieves the key with the fingerprint 123
 
     #>
-    param (
-        [Parameter(Mandatory=$true)]
-        [uint32]$fingerprint
-    )
     $json = @{
-        fingerprint = $fingerprint
+        
     }
     $key = Invoke-SageRPC -endpoint get_key -json $json
     $key.key
@@ -651,19 +646,31 @@ function Get-SageXchCoins{
 
     #>
     param(
-        [ValidateSet("any","spent","unspent")]
-        [string]$status
+        [Parameter(Mandatory=$true)]
+        [UInt32]$offset,
+        [Parameter(Mandatory=$true)]
+        [UInt32]$limit,
+        [ValidateSet("coin_id","amount","created_height","spent_height")]
+        [string]$sort_mode,
+        [switch]$ascending,
+        [switch]$include_spent_coins
     )
 
-    $coins = Invoke-SageRPC -endpoint get_xch_coins -json @{}
-    
-    if($status -eq "spent"){
-        $coins.coins | Where-Object { $null -ne $_.spent_height }
-    } elseif($status -eq "unspent"){
-        $coins.coins | Where-Object { $null -eq $_.spent_height }
-    } else {
-        $coins.coins
+    if(-not $sort_mode){
+        $sort_mode = "CoinId"
     }
+
+    $json = @{
+        offset = $offset
+        limit = $limit
+        sort_mode = $sort_mode
+        ascending = ($ascending.IsPresent)
+        include_spent_coins = ($include_spent_coins.IsPresent)
+    } 
+
+    $coins = Invoke-SageRPC -endpoint get_xch_coins -json $json
+    
+    $coins.coins
     
 }
 
@@ -752,11 +759,7 @@ function Get-SageTransactions {
     $json = @{
         offset = $offset
         limit = $limit
-    }
-    if($ascending.IsPresent){
-        $json.ascending = $true
-    } else {
-        $json.ascending = $false
+        ascending = ($ascending.IsPresent)
     }
     $transactions = Invoke-SageRPC -endpoint get_transactions -json $json
     $transactions.transactions
@@ -1819,6 +1822,7 @@ Class SageOffer{
             requested_assets = $this.requested_assets.toJson() | ConvertFrom-Json
             offered_assets = $this.offered_assets.toJson() | ConvertFrom-Json
             fee = $this.fee
+            auto_import = $false
         }
 
         if ($this.receive_address.Length -eq 62 -and $this.receive_address.StartsWith("xch")) {
@@ -2589,9 +2593,16 @@ class SagePayments {
     [array] $payments = @()
     $response
 
-    addPayment([string] $asset_id,[string]$address,[uint64]$amount) {
+    addCatPayment([string] $asset_id,[string]$address,[uint64]$amount) {
         $payment = @{
             asset_id = $asset_id
+            address = $address
+            amount = $amount
+        }
+        $this.payments += $payment
+    }
+    addXchPayment([string]$address,[UInt64]$amount){
+        $payment = @{
             address = $address
             amount = $amount
         }
