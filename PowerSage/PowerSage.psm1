@@ -1,4 +1,3 @@
-
 function Add-SageNftUri{    
     <#
     .SYNOPSIS
@@ -555,6 +554,49 @@ function Get-SageCoins{
     Invoke-SageRPC -endpoint get_coins -json $json
 }
 
+
+function Get-SageToken {
+    <#
+    .SYNOPSIS
+    Get a Chia Asset Token (CAT) by asset_id.
+
+    .DESCRIPTION
+    Get a Chia Asset Token by asset_id.
+
+    .PARAMETER asset_id
+    The asset_id of the Chia Asset Token.
+
+    .EXAMPLE
+    Get-SageToken -asset_id "a628c1c2c6fcb74d53746157e438e108eab5c0bb3e5c80ff9b1910b3e4832913"
+
+    
+    asset_id    : a628c1c2c6fcb74d53746157e438e108eab5c0bb3e5c80ff9b1910b3e4832913
+    name        : Spacebucks
+    ticker      : SBX
+    description : The galactic monetary standard.
+    icon_url    : https://icons.dexie.space/a628c1c2c6fcb74d53746157e438e108eab5c0bb3e5c80ff9b1910b3e4832913.webp
+    visible     : True
+    balance     : 0
+
+
+    #>
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$asset_id
+    )
+    if($asset_id.ToLower() -eq "xch"){
+        $json = @{}
+    } else {
+        $json = @{
+            asset_id = $asset_id
+        }
+    }
+    
+    Invoke-SageRPC -endpoint get_token -json $json
+  
+}
+
+
 function Get-SageCat{
     <#
     .SYNOPSIS
@@ -587,9 +629,8 @@ function Get-SageCat{
     $json = @{
         asset_id = $asset_id
     }
-    $cat = Invoke-SageRPC -endpoint get_cat -json $json
-    $catrecord = [CatRecord]::new($cat.cat)
-    return $catrecord
+    Invoke-SageRPC -endpoint get_token -json $json
+  
 }
 
 function Remove-SageCat{
@@ -2733,6 +2774,31 @@ function Approve-SageCoinSpend {
 
 }
 
+
+
+
+function Show-SageCoinSpend{
+    param(
+        [Parameter(Mandatory=$true)]
+        $coin_spend
+    )
+
+
+}
+
+function Get-CoinSetBlockSpend{
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$header_hash
+    )
+    $json = @{
+        header_hash = $header_hash
+    }
+    Invoke-RestMethod -Uri "https://api.coinset.org/get_block_spends" -Method Post -Body ($json | ConvertTo-Json) -ContentType "application/json"
+}
+
+
+
 function New-SagePfxCertificate {
     
     if($IsWindows){
@@ -2993,6 +3059,102 @@ function Complete-DACRedemption{
 
 }
 
+function Get-BlackScholesPrice {
+    param(
+        [double]$S,      # Current stock price
+        [double]$K,      # Strike price
+        [double]$T,      # Time to expiration in years
+        [double]$r,      # Risk-free interest rate (annual, decimal)
+        [double]$sigma,  # Volatility (annual, decimal)
+        [ValidateSet("Call", "Put")]
+        [string]$OptionType = "Call"
+    )
+
+    function Erf($x) {
+        # Abramowitz and Stegun approximation for error function
+        $a1 = 0.254829592
+        $a2 = -0.284496736
+        $a3 = 1.421413741
+        $a4 = -1.453152027
+        $a5 = 1.061405429
+        $p = 0.3275911
+        
+        $sign = if ($x -lt 0) { -1 } else { 1 }
+        $x = [math]::Abs($x)
+        
+        $t = 1.0 / (1.0 + $p * $x)
+        $y = 1.0 - (((((($a5 * $t + $a4) * $t + $a3) * $t + $a2) * $t + $a1) * $t) * [math]::Exp(-$x * $x))
+        
+        return $sign * $y
+    }
+
+    function NormCDF($x) {
+        return 0.5 * (1.0 + (Erf ($x / [math]::Sqrt(2))))
+    }
+
+    $d1 = ([math]::Log($S / $K) + ($r + 0.5 * $sigma * $sigma) * $T) / ($sigma * [math]::Sqrt($T))
+    $d2 = $d1 - $sigma * [math]::Sqrt($T)
+
+    if ($OptionType -eq "Call") {
+        $price = $S * (NormCDF $d1) - $K * [math]::Exp(-$r * $T) * (NormCDF $d2)
+    } else {
+        $negD1 = -$d1
+        $negD2 = -$d2
+        $price = $K * [math]::Exp(-$r * $T) * (NormCDF $negD2) - $S * (NormCDF $negD1)
+    }
+    return [math]::Round($price, 4)
+}
+
+function Get-Volatility {
+    param(
+        [double[]]$Prices
+    )
+    if ($Prices.Count -lt 2) {
+        throw "At least two prices are required to calculate volatility."
+    }
+    $logReturns = @()
+    for ($i = 1; $i -lt $Prices.Count; $i++) {
+        $logReturns += [math]::Log($Prices[$i] / $Prices[$i - 1])
+    }
+    $mean = ($logReturns | Measure-Object -Average).Average
+    $variance = ($logReturns | ForEach-Object { ($_ - $mean) * ($_ - $mean) } | Measure-Object -Sum).Sum / ($logReturns.Count - 1)
+    $stdDev = [math]::Sqrt($variance)
+    # Annualize assuming 252 trading days
+    $annualizedVolatility = $stdDev * [math]::Sqrt(252)
+    return [math]::Round($annualizedVolatility, 6)
+}
+
+
+
+function Get-OptionPrice{
+    param(
+        $xch_price,
+        $strike_price,
+        $days_to_expiration,
+        $risk_free_rate,
+        $volatility_days = 30
+    )
+        
+   
+
+    
+    $nowTime = (Get-Date).ToUniversalTime()
+    $DateTime = $nowTime.AddDays(-$volatility_days)
+    $StartTime = (1000*[System.Math]::Truncate((Get-Date -Date $DateTime -UFormat %s)))
+    $EndTime = (1000*[System.Math]::Truncate((Get-Date -Date $nowTime -UFormat %s)))
+
+    $dexie_uri = "https://api.dexie.space/v3/prices/historical_trades?ticker_id=fa4a180ac326e67ea289b869e3448256f6af05721f7cf934cb9901baa6b7a99d_xch&limit=0&start_time=$($StartTime)&end_time=$($EndTime)"
+    $historical_data = Invoke-RestMethod -Uri $dexie_uri -Method Get
+    $usd_prices = @()
+    $historical_data.trades.price | ForEach-Object {
+        $usd_prices += ([math]::Round((1/$_),3))
+    }
+    $volatility = Get-Volatility -Prices $usd_prices
+
+    $callPrice = Get-BlackScholesPrice -S $xch_price -K $strike_price -T ($days_to_expiration/365) -r $risk_free_rate -sigma $volatility -OptionType "Call"
+    $putPrice = Get-BlackScholesPrice -S $xch_price -K $strike_price -T ($days_to_expiration/365) -r $risk_free_rate -sigma $volatility -OptionType "Put"
+    return @{CallPrice=$callPrice; PutPrice=$putPrice}
+}
 
 
 

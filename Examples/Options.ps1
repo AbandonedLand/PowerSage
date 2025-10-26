@@ -1,0 +1,2 @@
+$option = Build-SageOption -underlying_asset xch -underlying_asset_amount (3.20 | ConvertTo-XchMojo) -strike_asset fa4a180ac326e67ea289b869e3448256f6af05721f7cf934cb9901baa6b7a99d -strike_asset_amount (25.25 | ConvertTo-CatMojo) -expires_in_days 28
+$option
