@@ -1,7 +1,7 @@
 function Add-SageNftUri{    
     <#
     .SYNOPSIS
-    Adds a URI to an NFT.
+    Add a new URI to an NFT's metadata (for updated content or mirrors).
 
     .DESCRIPTION
     Adds a URI to an NFT. This is used to add data, metadata, or license information to an NFT you currently own.
@@ -38,7 +38,7 @@ function Add-SageNftUri{
         [Parameter(Mandatory=$true)]
         [string]$uri,
         [Parameter(Mandatory=$true)]
-        [ValidateSet("Data","Metadata","License")]
+        [ValidateSet("data","metadata","license")]
         [string]$kind,
         [UInt64]$fee,
         [bool]$auto_submit
@@ -62,6 +62,103 @@ function Add-SageNftUri{
     Invoke-SageRPC -endpoint add_nft_uri -json $json
 }
 
+function Set-SageNftsToDid{
+    <#
+    .SYNOPSIS
+    Assign all NFTs in the wallet to a Decentralized Identity (DID).
+
+    .DESCRIPTION
+    Assign all NFTs in the wallet to a Decentralized Identity (DID).
+
+    .PARAMETER did_id
+    The did_id of the DID to assign the NFTs to.
+
+    .PARAMETER nft_ids
+    Array of nft_ids to assign.
+
+    .PARAMETER fee
+    The fee to pay for the transaction.
+
+    .PARAMETER auto_submit
+    Automatically submit the transaction. (default: true)
+
+    .EXAMPLE
+    Set-SageNftsToDid -did_id "did:chia:1238tz2ke73f22k30ety0eaumr2qry2l9rcffsshg9mgw2m8zw4ssx4carw"
+
+    This command assigns all NFTs in the wallet to the DID with the did_id "did:chia:1238tz2ke73f22k30ety0eaumr2qry2l9rcffsshg9mgw2m8zw4ssx4carw".
+    #>
+    param(
+        [Parameter(Mandatory=$true)]
+        [AllowNull()]
+        [string]$did_id,
+        [Parameter(Mandatory=$true)]
+        [string[]]$nft_ids,
+        [uint64]$fee,
+        [bool]$auto_submit
+    )
+    if($null -eq $fee){
+        $fee = 0
+    }
+
+    if($null -eq $auto_submit.IsPresent){
+        $auto_submit = $true
+    }
+
+    $json = @{
+        did_id = $did_id
+        nft_ids = $nft_ids
+        fee = $fee
+        auto_submit = $auto_submit
+    }
+
+    Invoke-SageRPC -endpoint assign_nfts_to_did -json $json
+}
+
+function Clear-SageNftsFromDid{
+    <#
+    .SYNOPSIS
+    Clear all NFTs from a Decentralized Identity (DID).
+
+    .DESCRIPTION
+    Clear all NFTs from a Decentralized Identity (DID).
+
+    .PARAMETER nft_ids
+    Array of nft_ids to clear.
+
+    .PARAMETER fee
+    The fee to pay for the transaction.
+    
+    .PARAMETER auto_submit
+    Automatically submit the transaction. (default: true)
+    
+    .EXAMPLE
+    Clear-SageNftsFromDid -nft_ids @("nft14sz0y7wfgculn7sf6wty0uw5vnt4m46dpyp7qeynmx5mn8s58tss0a2egx")
+
+    This command clears the NFT with the nft_id "nft14sz0y7wfgculn7sf6wty0uw5vnt4m46dpyp7qeynmx5mn8s58tss0a2egx" from its DID.
+    #>
+    param(
+        [Parameter(Mandatory=$true)]
+        [string[]]$nft_ids,
+        [UInt64]$fee,
+        [bool]$auto_submit
+    )
+
+    if($null -eq $fee){
+        $fee = 0
+    }
+    if($null -eq $auto_submit.IsPresent){
+        $auto_submit = $true
+    }
+
+    $json = @{
+        did_id = $null
+        nft_ids = $nft_ids
+        fee = $fee
+        auto_submit = $auto_submit
+    }
+
+    Invoke-SageRPC -endpoint assign_nfts_to_did -json $json
+}
 
 function Add-SagePeer {
     <#
@@ -514,10 +611,7 @@ function Get-SageCoins{
 
     #>
     param(
-        
-        [Parameter(Mandatory=$true)]
         [UInt32]$offset,
-        [Parameter(Mandatory=$true)]
         [UInt32]$limit,
         [string]$asset_id,
         [ValidateSet("coin_id","amount","created_height","spent_height","clawback_timestamp")]
@@ -528,6 +622,12 @@ function Get-SageCoins{
         
     )
 
+    if($null -eq $offset.IsPresent){
+        $offset = 0
+    }
+    if($null -eq $limit.IsPresent){
+        $limit = 10000
+    }
 
     $json = @{
         offset = $offset
@@ -551,49 +651,85 @@ function Get-SageCoins{
     }
     
 
-    Invoke-SageRPC -endpoint get_coins -json $json
+    $response = Invoke-SageRPC -endpoint get_coins -json $json
+    $sageCoins = [SageCoins]::new($response.coins, $response.total)
+    return $sageCoins
 }
 
+function Get-XchToken{
+    $json = @{}
+    $token = Invoke-SageRPC -endpoint get_token -json $json
+    $sageAsset = [SageToken]::new(
+        $token.token.asset_id,
+        $token.token.balance,
+        $token.token.description,
+        $token.token.icon_url,
+        $token.token.precision,
+        $token.token.revocation_address,
+        $token.token.ticker,
+        $token.token.visible
+    )
+    return $sageAsset
+}
 
 function Get-SageToken {
-    <#
-    .SYNOPSIS
-    Get a Chia Asset Token (CAT) by asset_id.
-
-    .DESCRIPTION
-    Get a Chia Asset Token by asset_id.
-
-    .PARAMETER asset_id
-    The asset_id of the Chia Asset Token.
-
-    .EXAMPLE
-    Get-SageToken -asset_id "a628c1c2c6fcb74d53746157e438e108eab5c0bb3e5c80ff9b1910b3e4832913"
-
-    
-    asset_id    : a628c1c2c6fcb74d53746157e438e108eab5c0bb3e5c80ff9b1910b3e4832913
-    name        : Spacebucks
-    ticker      : SBX
-    description : The galactic monetary standard.
-    icon_url    : https://icons.dexie.space/a628c1c2c6fcb74d53746157e438e108eab5c0bb3e5c80ff9b1910b3e4832913.webp
-    visible     : True
-    balance     : 0
-
-
-    #>
+    [CmdletBinding(DefaultParameterSetName = 'ByAssetId')]
     param(
         [Parameter(Mandatory=$true)]
-        [string]$asset_id
+        [string]$id
     )
-    if($asset_id.ToLower() -eq "xch"){
-        $json = @{}
-    } else {
-        $json = @{
-            asset_id = $asset_id
-        }
+
+    if($id.ToLower() -eq "xch"){
+        return Get-XchToken
     }
+
+    if($id.Length -ne 64){
+        $ticker = $id
+    } else {
+        $asset_id = $id
+    }
+
+    if($ticker){
+        $cats = Get-SageCats
+        $found = $cats.cats | Where-Object {$_.ticker -eq $ticker} 
+        if($found){
+            $sageAsset = [SageToken]::new(
+            $found.asset_id,
+            $found.balance,
+            $found.description,
+            $found.icon_url,
+            $found.precision,
+            $found.revocation_address,
+            $found.ticker,
+            $found.visible
+            )
+        }
+    } else {
+        if($asset_id.ToLower() -eq "xch"){
+            $json = @{}
+        } else {
+            $json = @{
+                asset_id = $asset_id
+            }
+        }
     
-    Invoke-SageRPC -endpoint get_token -json $json
-  
+        $token = Invoke-SageRPC -endpoint get_token -json $json
+        $sageAsset = [SageToken]::new(
+            $token.token.asset_id,
+            $token.token.balance,
+            $token.token.description,
+            $token.token.icon_url,
+            $token.token.precision,
+            $token.token.revocation_address,
+            $token.token.ticker,
+            $token.token.visible
+        )
+    }
+    if( -not $sageAsset ){
+        throw "Sage Token with id or ticker '$id' not found."
+    }
+
+    return $sageAsset
 }
 
 
@@ -2045,6 +2181,118 @@ function Build-SageOffer{
 
     $offer = [SageOffer]::new()
     return $offer
+}
+
+Class SageToken {
+    [string]$asset_id
+    [UInt128]$balance
+    [string]$description
+    [string]$icon_url
+    [uint32]$precision
+    [string]$revocation_address
+    [string]$ticker
+    [bool]$visible
+    
+    
+    SageToken(){}
+
+    SageToken($asset_id, [UInt128]$balance, $description, $icon_url, [uint32]$precision, $revocation_address, $ticker, [bool]$visible){
+        $this.asset_id = $asset_id
+        $this.balance = $balance
+        $this.description = $description
+        $this.icon_url = $icon_url
+        $this.precision = $precision
+        $this.revocation_address = $revocation_address
+        $this.ticker = $ticker
+        $this.visible = $visible
+    }
+
+    [decimal] DisplayBalance(){
+        if($this.balance -gt 0){
+            $bal = [double]$this.balance
+            return [Math]::round(($bal/ [Math]::Pow(10, $this.precision)), $this.precision)
+        } else {
+            return 0
+        }
+    }
+
+    [void]Combine_Help(){
+        Write-Host "Parameters:"
+        Write-Host ""
+        Write-Host -ForegroundColor Green '[uint64] $fee'
+        Write-Host -ForegroundColor Green '[uint128] $max_coin_amount'
+        Write-Host -ForegroundColor Yellow "** amounts are in mojos: (1 CAT = 1000 mojos | 1 XCH = 1000000000000 mojos)"
+        Write-Host -ForegroundColor Green  '[uint32] $max_coins'
+    }
+
+    [PSCustomObject] Combine($fee, $max_coin_amount, $max_coins, $auto_submit=$true){
+        $json = @{ 
+            fee = $fee
+            max_coin_amount = $max_coin_amount
+            max_coins = $max_coins
+            auto_submit = $auto_submit
+        }
+        
+
+        if($this.asset_id -eq ""){
+            return Invoke-SageRPC -endpoint auto_combine_xch -json $json
+        } else {
+            $json.Add("asset_id", $this.asset_id)
+            return Invoke-SageRPC -endpoint auto_combine_cat -json $json
+        }
+        
+    }
+}
+
+Class SageCoin{
+    [string]$address
+    [uint128]$amount
+    [uint32]$clawback_timestamp
+    [string]$coin_id
+    [uint64]$created_height
+    [uint64]$created_timestamp
+    [string]$offer_id
+    [uint64]$spent_height
+    [UInt64]$spent_timestamp
+    [string]$transaction_id
+
+    SageCoins(){}
+    SageCoins($address, [uint128]$amount, [uint32]$clawback_timestamp, $coin_id, [uint64]$created_height, [uint64]$created_timestamp, $offer_id, [uint64]$spent_height, [UInt64]$spent_timestamp, $transaction_id){
+        $this.address = $address
+        $this.amount = $amount
+        $this.clawback_timestamp = $clawback_timestamp
+        $this.coin_id = $coin_id
+        $this.created_height = $created_height
+        $this.created_timestamp = $created_timestamp
+        $this.offer_id = $offer_id
+        $this.spent_height = $spent_height
+        $this.spent_timestamp = $spent_timestamp
+        $this.transaction_id = $transaction_id
+    }
+}
+
+class SageCoins{
+    [SageCoin[]]$coins
+    [uint64]$total
+
+    SageCoins(){}
+    SageCoins([SageCoin[]]$coins, [uint64]$total){
+        $this.coins = $coins
+        $this.total = $total
+    }
+
+    [array]Spent(){
+        return $this.coins | Where-Object { $_.spent_height -gt 0 }
+    }
+
+    [array]Unspent(){
+        return $this.coins | Where-Object { $_.spent_height -eq 0 }
+    }
+
+    [array]Offered(){
+        return $this.coins | Where-Object {$_.offer_id -ne "" }
+    }
+
 }
 
 Class SageOffer{
