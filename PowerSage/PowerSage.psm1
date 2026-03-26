@@ -3064,9 +3064,18 @@ function Get-SagePfxCertificate {
     if($IsLinux){
         $certPath = "$home/.local/share/com.rigidnetwork.sage/ssl/wallet.pfx"
     }
+    
+    if($IsMacOS){
+        $certPath = "$home/Library/Application Support/com.rigidnetwork.sage/ssl/wallet.pfx"
+    }
+    if(-not (Test-Path -Path $certPath)){
+        New-SagePfxCertificate
+    }
+
     if(-not (Test-Path -Path $certPath)){
         throw "The certificate to access the wallet does not exist. Please create it using New-SagePfxCertificate."
     }
+    
     $certificate = Get-PfxCertificate -FilePath $certPath -Password $certPassword
     return $certificate
 }
