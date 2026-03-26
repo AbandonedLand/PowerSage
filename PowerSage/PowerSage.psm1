@@ -3035,6 +3035,11 @@ function New-SagePfxCertificate {
         $keyPath = "$home/.local/share/com.rigidnetwork.sage/ssl/wallet.key"
         $pfxPath = "$home/.local/share/com.rigidnetwork.sage/ssl/wallet.pfx"
     }
+    if($IsMacOS){
+        $certPath = "$home/Library/Application Support/com.rigidnetwork.sage/ssl/wallet.crt"
+        $keyPath = "$home/Library/Application Support/com.rigidnetwork.sage/ssl/wallet.key"
+        $pfxPath = "$home/Library/Application Support/com.rigidnetwork.sage/ssl/wallet.pfx"
+    }
 
     $cert = Get-Content -Path $certPath -Raw
     $key = Get-Content -Path $keyPath -Raw
