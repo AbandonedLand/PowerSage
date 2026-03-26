@@ -930,6 +930,16 @@ function Rename-SageKey {
     Invoke-SageRPC -endpoint rename_key -json $json
 }
 
+function Get-SageVersion{
+    <#
+    .SYNOPSIS 
+    Gets the version of sage wallet running
+
+    #>
+    Invoke-SageRpc -endpoint get_version -json @{}
+
+}
+
 function Get-SageSecretKey {
     <#
     .SYNOPSIS
@@ -961,61 +971,6 @@ function Get-SageSecretKey {
 }
 
 
-function Get-SageXchCoins{
-    <#
-    .SYNOPSIS
-    Get a list of coins for the Chia (XCH) asset.
-
-    .DESCRIPTION
-    Returns a list of coins for the Chia (XCH) asset. The coins can be filtered by status (spent or unspent).
-
-    .PARAMETER status
-    The status of the coins. The options are "any", "spent", or "unspent".
-
-    .EXAMPLE
-    Get-SageXchCoins -status "unspent"
-
-    This command returns a list of unspent coins for the Chia (XCH) asset.
-
-    .EXAMPLE
-    Get-SageXchCoins -status "spent"
-
-    This command returns a list of spent coins for the Chia (XCH) asset.
-
-    .EXAMPLE
-    Get-SageXchCoins
-
-    This command returns a list of all coins for the Chia (XCH) asset.
-
-    #>
-    param(
-        [Parameter(Mandatory=$true)]
-        [UInt32]$offset,
-        [Parameter(Mandatory=$true)]
-        [UInt32]$limit,
-        [ValidateSet("coin_id","amount","created_height","spent_height")]
-        [string]$sort_mode,
-        [switch]$ascending,
-        [switch]$include_spent_coins
-    )
-
-    if(-not $sort_mode){
-        $sort_mode = "CoinId"
-    }
-
-    $json = @{
-        offset = $offset
-        limit = $limit
-        sort_mode = $sort_mode
-        ascending = ($ascending.IsPresent)
-        include_spent_coins = ($include_spent_coins.IsPresent)
-    } 
-
-    $coins = Invoke-SageRPC -endpoint get_xch_coins -json $json
-    
-    $coins.coins
-    
-}
 
 function Get-SageDids {
     <#
@@ -2304,7 +2259,8 @@ Class SageOffer{
     [pscustomobject]$offer_data
     $json
     [bool]$validate
-
+    [string[]]$coin_ids
+    [pscustomobject]$dexie_data
 
     SageOffer(){
         $this.requested_assets = @()
@@ -2393,6 +2349,10 @@ Class SageOffer{
             $this.json.expires_at_second = $this.expires_at_second
         }
 
+        if($this.coin_ids.Count -gt 0){
+            $this.json.coin_ids = $this.coin_ids
+        }
+
     }
 
     [void] validateOnly(){
@@ -2401,6 +2361,21 @@ Class SageOffer{
     
     [pscustomobject]showoffer(){
         return $this.offer_data
+    }
+
+
+    [void] submit(){
+        
+        $uri = 'https://api.dexie.space/v1/offers'
+        $body = @{
+            offer = ($this.offer_data.offer)
+        }
+    
+        $contentType = 'application/json' 
+
+        $json_offer = $body | ConvertTo-Json
+
+        $this.dexie_data = Invoke-RestMethod -Method POST -body $json_offer -Uri $uri -ContentType $contentType
     }
 
     createoffer() {
@@ -3031,6 +3006,7 @@ function Show-SageCoinSpend{
         $coin_spend
     )
 
+    
 
 }
 
