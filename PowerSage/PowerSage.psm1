@@ -61,7 +61,6 @@ function Add-SageNftUri{
 
     Invoke-SageRPC -endpoint add_nft_uri -json $json
 }
-
 function Set-SageNftsToDid{
     <#
     .SYNOPSIS
@@ -113,7 +112,6 @@ function Set-SageNftsToDid{
 
     Invoke-SageRPC -endpoint assign_nfts_to_did -json $json
 }
-
 function Clear-SageNftsFromDid{
     <#
     .SYNOPSIS
@@ -159,7 +157,6 @@ function Clear-SageNftsFromDid{
 
     Invoke-SageRPC -endpoint assign_nfts_to_did -json $json
 }
-
 function Add-SagePeer {
     <#
     .SYNOPSIS
@@ -186,7 +183,6 @@ function Add-SagePeer {
 
     Invoke-SageRPC -endpoint add_peer -json $json
 }
-
 function Move-SageNftsToDid{
     <#
     .SYNOPSIS
@@ -237,7 +233,6 @@ function Move-SageNftsToDid{
 
     Invoke-SageRPC -endpoint assign_nfts_to_did -json $json
 }
-
 function Sync-SageCat{
     <#
     .SYNOPSIS
@@ -261,9 +256,6 @@ function Sync-SageCat{
     }
     Invoke-SageRPC -endpoint resync_cat -json $json
 }
-
-
-
 function Get-SageCats{
     <#
     .SYNOPSIS
@@ -306,10 +298,6 @@ function Get-SageCats{
     Invoke-SageRPC -endpoint get_cats -json @{}
     
 }
-
-
-
-
 function Invoke-SageRPC {
     <#
 
@@ -345,7 +333,6 @@ function Invoke-SageRPC {
 
     Invoke-RestMethod -Uri $uri -Method Post -body $data -ContentType 'Application/json' -Certificate $cert -SkipCertificateCheck
 }
-
 function Test-SageRPC{
     <#
     .SYNOPSIS
@@ -366,7 +353,6 @@ function Test-SageRPC{
         throw "Sage wallet daemon is not running."
     }
 }
-
 function New-SageMnemonic {
     <#
     .SYNOPSIS
@@ -395,7 +381,6 @@ function New-SageMnemonic {
     Invoke-SageRPC -endpoint generate_mnemonic -json $json
     
 }
-
 function Import-SageKeys {
     <#
     .SYNOPSIS
@@ -437,7 +422,6 @@ function Import-SageKeys {
         Invoke-SageRPC -endpoint import_key -json $json
     }
 }
-
 function Get-SageKey {
     <#
     .SYNOPSIS
@@ -460,8 +444,6 @@ function Get-SageKey {
     Invoke-SageRPC -endpoint get_key -json $json
     
 }
-
-
 function Get-SageKeys {
     <#
     .SYNOPSIS
@@ -480,7 +462,6 @@ function Get-SageKeys {
     Invoke-SageRPC -endpoint get_keys -json @{}
     
 }
-
 function Connect-SageFingerprint {
     <#
     .SYNOPSIS
@@ -508,11 +489,9 @@ function Connect-SageFingerprint {
     }
     Invoke-SageRPC -endpoint login -json $json
 }
-
 function Disconnect-Sage {
     Invoke-SageRPC -endpoint logout -json @{}
 }
-
 
 function Get-SageDerivations {
     <#
@@ -578,7 +557,6 @@ function Get-SageSyncStatus{
 
     Invoke-SageRPC -endpoint get_sync_status -json @{}
 }
-
 
 function Get-SageCoins{
     <#
@@ -671,7 +649,6 @@ function Get-XchToken{
     )
     return $sageAsset
 }
-
 function Get-SageToken {
     [CmdletBinding(DefaultParameterSetName = 'ByAssetId')]
     param(
@@ -731,8 +708,6 @@ function Get-SageToken {
 
     return $sageAsset
 }
-
-
 function Get-SageCat{
     <#
     .SYNOPSIS
@@ -768,7 +743,6 @@ function Get-SageCat{
     Invoke-SageRPC -endpoint get_token -json $json
   
 }
-
 function Remove-SageCat{
     <#
     .SYNOPSIS
@@ -837,7 +811,6 @@ function Set-SageDerivationIndex {
     }
     Invoke-SageRPC -endpoint increase_derivation_index -json $json
 }
-
 function Sync-SageFingerprint {
     <#
 
@@ -969,8 +942,6 @@ function Get-SageSecretKey {
     $secrets = Invoke-SageRPC -endpoint get_secret_key -json $json
     $secrets.secrets
 }
-
-
 
 function Get-SageDids {
     <#
@@ -1463,8 +1434,6 @@ function Split-SageXchCoin {
 
     Invoke-SageRPC -endpoint split_xch -json $json
 }
-
-
 
 function ConvertFrom-XchMojo{
     param(
@@ -2028,7 +1997,6 @@ function Get-SageOption{
     Invoke-SageRPC -endpoint get_option -json $json
     
 }
-
 
 
 function Build-SageOption{
