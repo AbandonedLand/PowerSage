@@ -331,7 +331,13 @@ function Invoke-SageRPC {
    
     $data = $json | ConvertTo-Json -Depth 30
 
-    Invoke-RestMethod -Uri $uri -Method Post -body $data -ContentType 'Application/json' -Certificate $cert -SkipCertificateCheck
+    try{
+        Invoke-RestMethod -Uri $uri -Method Post -body $data -ContentType 'Application/json' -Certificate $cert -SkipCertificateCheck
+    } catch {
+        Write-Error -Message "Could not contact Sage RPC. Verify it is running and the RPC server is started"
+        throw "Sage Connection Error"
+    }
+    
 }
 function Test-SageRPC{
     <#
@@ -2385,7 +2391,6 @@ Class SageOffer{
     [void] submitSwap(){
         $uri = 'https://api.dexie.space/v1/offers/swap'
         
-
         $localjson = @{
             offer = ($this.offer_data.offer)
             fee_destination = "xch1gjh6ehqk9m0mvyx4knt3j0zx09nllmech2jeq7cv2lsqgzdh2mnqc5zk2t"
