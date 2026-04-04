@@ -656,57 +656,7 @@ function Get-SageToken {
         [string]$id
     )
 
-    if($id.ToLower() -eq "xch"){
-        return Get-XchToken
-    }
-
-    if($id.Length -ne 64){
-        $ticker = $id
-    } else {
-        $asset_id = $id
-    }
-
-    if($ticker){
-        $cats = Get-SageCats
-        $found = $cats.cats | Where-Object {$_.ticker -eq $ticker} 
-        if($found){
-            $sageAsset = [SageToken]::new(
-            $found.asset_id,
-            $found.balance,
-            $found.description,
-            $found.icon_url,
-            $found.precision,
-            $found.revocation_address,
-            $found.ticker,
-            $found.visible
-            )
-        }
-    } else {
-        if($asset_id.ToLower() -eq "xch"){
-            $json = @{}
-        } else {
-            $json = @{
-                asset_id = $asset_id
-            }
-        }
-    
-        $token = Invoke-SageRPC -endpoint get_token -json $json
-        $sageAsset = [SageToken]::new(
-            $token.token.asset_id,
-            $token.token.balance,
-            $token.token.description,
-            $token.token.icon_url,
-            $token.token.precision,
-            $token.token.revocation_address,
-            $token.token.ticker,
-            $token.token.visible
-        )
-    }
-    if( -not $sageAsset ){
-        throw "Sage Token with id or ticker '$id' not found."
-    }
-
-    return $sageAsset
+    return [SageToken]::New($id)
 }
 function Get-SageCat{
     <#
@@ -2116,8 +2066,94 @@ Class SageToken {
     [string]$ticker
     [bool]$visible
     
-    
     SageToken(){}
+    
+    SageToken($id){
+
+        if($id.ToLower() -eq "xch"){
+            $token = Invoke-SageRPC -endpoint get_token -json @{}
+            $this.asset_id = $token.token.asset_id
+            $this.balance = $token.token.balance
+            $this.description = $token.token.description
+            $this.icon_url = $token.token.icon_url
+            $this.precision = $token.token.precision
+            $this.revocation_address = $token.token.revocation_address
+            $this.ticker = $token.token.ticker
+            $this.visible = $token.token.visible
+        } else {
+
+            if($id.Length -ne 64){
+                
+                $cats = Get-SageCats
+                $found = $cats.cats | Where-Object {$_.ticker -eq $id} 
+                if($found){
+                    $this.asset_id = $found.asset_id
+                    $this.balance = $found.balance
+                    $this.description = $found.description
+                    $this.icon_url = $found.icon_url
+                    $this.precision = $found.precision
+                    $this.revocation_address = $found.revocation_address    
+                    $this.ticker = $found.ticker
+                    $this.visible = $found.visible
+                } else {
+                    $dexieTokens = Invoke-RestMethod -Uri "https://dexie.space/v1/assets?page_size=25&page=1&type=all&filter=$id"
+                    if($dexieTokens.success){
+                        $found = $dexieTokens.assets | Where-Object {$_.code -eq $id}
+                        if($found && $found.assets.count -eq 1){
+                            
+                            $this.asset_id = $found.id
+                            $this.balance = 0
+                            $this.description = $found.description
+                            $this.icon_url = "https://icons.dexie.space/$($found.id).webp"
+                            $this.precision = 3
+                            $this.revocation_address = $found.revocation_address
+                            $this.ticker = $id.ToString().ToUpper()
+                            $this.visible = $true
+                        } else {
+                            throw "Sage Token with ticker '$id' not found."
+                        }
+                    }
+
+                }
+            } else {
+                $cats = Get-SageCats
+                $found = $cats.cats | Where-Object {$_.asset_id -eq $id} 
+                if($found){
+                    $this.asset_id = $found.asset_id
+                    $this.balance = $found.balance
+                    $this.description = $found.description
+                    $this.icon_url = $found.icon_url
+                    $this.precision = $found.precision
+                    $this.revocation_address = $found.revocation_address    
+                    $this.ticker = $found.ticker
+                    $this.visible = $found.visible
+                } else {
+                    $dexieTokens = Invoke-RestMethod -Uri "https://dexie.space/v1/assets?page_size=25&page=1&type=all&filter=$id"
+                    if($dexieTokens.success){
+                        $found = $dexieTokens.assets | Where-Object {$_.code -eq $id}
+                        if($found && $found.assets.count -eq 1){
+                            
+                            $this.asset_id = $found.id
+                            $this.balance = 0
+                            $this.description = $found.description
+                            $this.icon_url = "https://icons.dexie.space/$($found.id).webp"
+                            $this.precision = 3
+                            $this.revocation_address = $found.revocation_address
+                            $this.ticker = $id.ToString().ToUpper()
+                            $this.visible = $true
+                        } else {
+                            throw "Sage Token with ticker '$id' not found."
+                        }
+                    }
+
+                }
+                
+            }
+
+        }
+    
+
+    }
 
     SageToken($asset_id, [UInt128]$balance, $description, $icon_url, [uint32]$precision, $revocation_address, $ticker, [bool]$visible){
         $this.asset_id = $asset_id
@@ -2344,6 +2380,22 @@ Class SageOffer{
         $json_offer = $body | ConvertTo-Json
 
         $this.dexie_data = Invoke-RestMethod -Method POST -body $json_offer -Uri $uri -ContentType $contentType
+    }
+
+    [void] submitSwap(){
+        $uri = 'https://api.dexie.space/v1/offers/swap'
+        
+
+        $localjson = @{
+            offer = ($this.offer_data.offer)
+            fee_destination = "xch1gjh6ehqk9m0mvyx4knt3j0zx09nllmech2jeq7cv2lsqgzdh2mnqc5zk2t"
+            } | ConvertTo-Json
+
+        $uri = "https://api.dexie.space/v1/swap"
+        $contentType = 'application/json'
+
+        $result = Invoke-RestMethod -Method Post -Uri $uri -Body $localjson -ContentType $contentType
+        $this.dexie_data = $result
     }
 
     createoffer() {
