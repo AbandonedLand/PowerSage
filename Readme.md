@@ -64,7 +64,7 @@ PS> 3500 | ConvertFrom-CatMojo
 ```
 
 
-### Createing an Offer
+### Creating an Offer
 
 Example of creating an offer requesting 1 XCH for 3 wUSDC.b
 
@@ -75,26 +75,26 @@ $offer = Build-SageOffer
 
 <#
 Offer Cat
-$offer.offercat('asset_id',AMOUNT_Mojo)
+$offer.offerCat('asset_id',AMOUNT_Mojo)
 
 Request Cat
-$offer.requestcat('asset_id',AMOUNT_Mojo)
+$offer.requestCat('asset_id',AMOUNT_Mojo)
 #>
 
-$offer.offercat('fa4a180ac326e67ea289b869e3448256f6af05721f7cf934cb9901baa6b7a99d',3000)
+$offer.offerCat('fa4a180ac326e67ea289b869e3448256f6af05721f7cf934cb9901baa6b7a99d',3000)
 
 
 <#
 Request XCH
 -----------
-$offer.requestxch(AMOUNT_Mojo)
+$offer.requestXch(AMOUNT_Mojo)
 
 Offer XCH
 ----------
-$offer.offerxch(AMOUNT_Mojo)
+$offer.offerXch(AMOUNT_Mojo)
 #>
 
-$offer.requestxch( (1 | ConvertTo-XchMojo) )  # Converts 1 to the mojo value of 1000000000000
+$offer.requestXch( (1 | ConvertTo-XchMojo) )  # Converts 1 to the mojo value of 1000000000000
 
 
 # Once you're done adding items to the offer, you can create it using the createoffer() command.
@@ -103,7 +103,7 @@ $offer.requestxch( (1 | ConvertTo-XchMojo) )  # Converts 1 to the mojo value of 
 
 # NFTs:
 # NFTs can also be requested/offered by using:
-# $offer.offernft('nft_id')
+# $offer.offerNft('nft_id')
 
 $offer.createoffer()
 
